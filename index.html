@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>단어암기툴</title>
+<style>
+    body { font-family: Arial; text-align: center; margin: 0; padding: 0; }
+    header { display: flex; justify-content: space-between; padding: 10px 20px; background:#eee; }
+    #mainInterface { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 80vh; }
+    #memorizeSection { display:none; }
+    #wordTitle { font-size: 50px; margin: 50px 0; }
+    #meaning { font-size: 28px; margin: 20px 0; display: none; }
+    button { padding: 10px 20px; margin: 10px; font-size: 16px; }
+    #scoreBtns button { padding: 10px 20px; font-size:16px; }
+    #addList div { margin: 5px; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+</style>
+</head>
+<body>
+<header>
+    <div><button onclick="location.href='add.html'">단어 저장 탭</button></div>
+    <div><h2>단어암기툴</h2></div>
+</header>
+
+<div id="mainInterface">
+    <button id="startBtn">암기 시작</button>
+</div>
+
+<div id="memorizeSection">
+    <div id="wordTitle"></div>
+    <button id="showMeaningBtn">뜻 보기</button>
+    <div id="meaning"></div>
+    <div id="scoreBtns">
+        <button onclick="updateScore('아는거')">아는거</button>
+        <button onclick="updateScore('애매한거')">애매</button>
+        <button onclick="updateScore('모르는거')">모르는거</button>
+    </div>
+</div>
+
+<script>
+let words = JSON.parse(localStorage.getItem('words') || '[]');
+let memorizeWords = [];
+let currentIndex = 0;
+
+const startBtn = document.getElementById('startBtn');
+const mainInterface = document.getElementById('mainInterface');
+const memorizeSection = document.getElementById('memorizeSection');
+const wordTitle = document.getElementById('wordTitle');
+const meaningDiv = document.getElementById('meaning');
+const showMeaningBtn = document.getElementById('showMeaningBtn');
+
+function updateScore(type){
+    if(currentIndex >= memorizeWords.length) return;
+    let w = memorizeWords[currentIndex];
+    if(type==='아는거') w.score = Math.max(0, w.score-1);
+    if(type==='모르는거') w.score = Math.min(10, w.score+1);
+    // 애매는 변화 없음
+    w.star = 0; // 뽑혔으므로 별 0
+
+    // 로컬스토리지 반영
+    let idx = words.findIndex(word=>word.word===w.word && word.meaning===w.meaning);
+    if(idx!==-1){ words[idx].score = w.score; words[idx].star=w.star; }
+    localStorage.setItem('words', JSON.stringify(words));
+
+    currentIndex++;
+    showNextWord();
+}
+
+function showNextWord(){
+    meaningDiv.style.display = 'none';
+    if(currentIndex >= memorizeWords.length){
+        alert("암기 완료!");
+        memorizeSection.style.display = 'none';
+        mainInterface.style.display='flex';
+        return;
+    }
+    let w = memorizeWords[currentIndex];
+    wordTitle.textContent = w.word;
+    meaningDiv.textContent = w.meaning;
+}
+
+showMeaningBtn.onclick = ()=>{ meaningDiv.style.display='block'; }
+
+startBtn.onclick = ()=>{
+    if(words.length===0){ alert("저장된 단어가 없습니다!"); return; }
+    mainInterface.style.display='none';
+    memorizeSection.style.display='block';
+
+    if(words.length <= 50){
+        // 단어 50개 미만이면 모든 단어 보여주고 star 증가
+        memorizeWords = [...words];
+        words.forEach(w=>{ w.star = Math.min((w.star||0)+1,5); });
+        localStorage.setItem('words', JSON.stringify(words));
+    } else {
+        // 단어 50개 이상이면 점수+별 기반 랜덤 추출
+        let sortedWords = [...words].sort((a,b)=> (b.star||0)-(a.star||0));
+        let groupLow = sortedWords.filter(w=>w.score<=3);
+        let groupMid = sortedWords.filter(w=>w.score>=4 && w.score<=6);
+        let groupHigh = sortedWords.filter(w=>w.score>=7);
+
+        function pickRandom(arr, count){
+            let pick=[];
+            for(let i=0;i<count;i++){
+                if(arr.length===0) break;
+                let idx = Math.floor(Math.random()*arr.length);
+                pick.push(arr[idx]);
+                arr.splice(idx,1);
+            }
+            return pick;
+        }
+
+        memorizeWords = [
+            ...pickRandom(groupLow, Math.round(50*0.1)),
+            ...pickRandom(groupMid, Math.round(50*0.3)),
+            ...pickRandom(groupHigh, 50 - Math.round(50*0.1) - Math.round(50*0.3))
+        ];
+
+        // 선택 안된 단어 star+1
+        sortedWords.forEach(w=>{
+            if(!memorizeWords.includes(w)){
+                w.star = Math.min((w.star||0)+1,5);
+            }
+        });
+        localStorage.setItem('words', JSON.stringify(sortedWords));
+    }
+
+    currentIndex=0;
+    showNextWord();
+}
+</script>
+</body>
+</html>
