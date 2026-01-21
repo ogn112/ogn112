@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>단어 저장</title>
+<style>
+    body { font-family: Arial; padding: 20px; }
+    input { padding:5px; margin:5px; }
+    button { padding:5px 10px; margin:5px; }
+    #addList div { margin:5px; border-bottom:1px solid #ccc; padding-bottom:5px; }
+</style>
+</head>
+<body>
+<h2>단어 저장</h2>
+<input id="wordInput" placeholder="단어">
+<input id="meaningInput" placeholder="뜻">
+<button onclick="addWord()">저장</button>
+<div id="addList"></div>
+<script>
+let words = JSON.parse(localStorage.getItem('words')||'[]');
+
+function renderList(){
+    const list = document.getElementById('addList');
+    list.innerHTML='';
+    words.forEach((w,i)=>{
+        const div = document.createElement('div');
+        div.innerHTML=`${w.word} : ${w.meaning} | 점수:${w.score||5} 
+        <button onclick="deleteWord(${i})">삭제</button>`;
+        list.appendChild(div);
+    });
+}
+
+function addWord(){
+    const word = document.getElementById('wordInput').value.trim();
+    const meaning = document.getElementById('meaningInput').value.trim();
+    if(!word||!meaning){ alert("단어와 뜻을 입력하세요"); return; }
+    words.push({word,meaning,score:5,star:0});
+    localStorage.setItem('words',JSON.stringify(words));
+    document.getElementById('wordInput').value='';
+    document.getElementById('meaningInput').value='';
+    renderList();
+}
+
+function deleteWord(idx){
+    words.splice(idx,1);
+    localStorage.setItem('words',JSON.stringify(words));
+    renderList();
+}
+
+renderList();
+</script>
+</body>
+</html>
